@@ -1,7 +1,10 @@
 package notif_bot
 
 import (
+	"bytes"
+	"encoding/json"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/orenvadi/tg_notification_bot/internal/storage"
@@ -113,8 +116,36 @@ func handlePasswordInput(bot *telebot.Bot, state *UserState, m *telebot.Message,
 	}
 }
 
+// authenticateUser sends the user's email and password to MDelivery's authentication endpoint.
+// Returns true if the authentication is successful (HTTP 200), otherwise false.
 func authenticateUser(email, password string) bool {
-	// Replace with actual MDelivery authentication API call
-	// Mocking the authentication process
-	return email == "test@example.com" && password == "password"
+	// MDelivery authentication endpoint
+	url := "http://localhost:8090/auth"
+
+	// Create the request payload
+	payload := map[string]string{
+		"email":    email,
+		"password": password,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal authentication payload: %v", err)
+		return false
+	}
+
+	// Send the POST request
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		log.Printf("Failed to send authentication request: %v", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode == http.StatusOK {
+		return true
+	}
+
+	log.Printf("Authentication failed with status code: %d", resp.StatusCode)
+	return false
 }
